@@ -5,6 +5,7 @@ import org.jasypt.encryption.StringEncryptor;
 import org.opendatamesh.platform.core.commons.servers.exceptions.InternalServerException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.NotFoundException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
+import org.opendatamesh.platform.up.executor.gitlabci.clients.DevopsServerClient;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.GitlabClient;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.GitlabInstance;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.GitlabInstanceRepository;
@@ -15,6 +16,7 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.ConfigurationRes
 import org.opendatamesh.platform.up.executor.gitlabci.resources.ExecutorApiStandardErrors;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TaskStatus;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TemplateResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabCallbackResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabPipelineResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabRunResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabRunState;
@@ -27,6 +29,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -43,6 +46,7 @@ public class GitlabPipelineService {
     private Integer pollingNumRetries;
     @Value("${polling.interval}")
     private Integer pollingIntervalSeconds;
+    private final DevopsServerClient devopsServerClient;
 
     private static final Logger logger = LoggerFactory.getLogger(GitlabPipelineService.class);
 
@@ -194,6 +198,16 @@ public class GitlabPipelineService {
                 return CompletableFuture.completedFuture(TaskStatus.ABORTED);
             default:
                 return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    public void sendPipelineSuccessCallback(GitlabCallbackResource callbackResource) {
+        if (Objects.equals(callbackResource.getObjectKind(), "pipeline") && callbackResource.getObjectAttributes().getStatus().equals(GitlabRunState.success.toString())) {
+            Optional<PipelineRun> optPipelineRun = pipelineRunRepository.findByProjectAndRunId(
+                    String.valueOf(callbackResource.getProject().getId()),
+                    String.valueOf(callbackResource.getObjectAttributes().getId()));
+
+            optPipelineRun.ifPresent(pipelineRun -> devopsServerClient.stopTask(pipelineRun.getTaskId()));
         }
     }
 }

@@ -4,6 +4,11 @@
 server:
   port: 9004
 
+odm:
+  productplane:
+    devopsservice:
+      address: http://localhost:8002
+
 ################
 # Pipeline Polling Config
 ################

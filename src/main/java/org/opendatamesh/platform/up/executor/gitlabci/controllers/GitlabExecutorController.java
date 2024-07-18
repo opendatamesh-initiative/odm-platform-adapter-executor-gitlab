@@ -14,6 +14,7 @@ import org.opendatamesh.platform.core.commons.clients.resources.ErrorRes;
 import org.opendatamesh.platform.core.commons.servers.exceptions.InternalServerException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.*;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabCallbackResource;
 import org.opendatamesh.platform.up.executor.gitlabci.services.GitlabPipelineService;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
@@ -44,6 +45,8 @@ public class GitlabExecutorController {
         EXAMPLE_TWO.setTemplate("\"{\\\"organization\\\":\\\"andreagioia\\\",\\\"project\\\":\\\"opendatamesh\\\",\\\"pipelineId\\\":\\\"3\\\",\\\"branch\\\":\\\"main\\\"}\"");
         EXAMPLE_TWO.setConfigurations("\"{\\\"stagesToSkip\\\":[]}\"");
     }
+
+    private final GitlabPipelineService gitlabPipelineService;
 
     // ===============================================================================
     // POST /tasks
@@ -195,5 +198,11 @@ public class GitlabExecutorController {
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @PostMapping("/callback")
+    @ResponseStatus(HttpStatus.OK)
+    public void taskCallback(@RequestBody GitlabCallbackResource gitlabCallbackResource) {
+        gitlabPipelineService.sendPipelineSuccessCallback(gitlabCallbackResource);
     }
 }

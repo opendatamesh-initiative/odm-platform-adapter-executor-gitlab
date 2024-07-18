@@ -1,13 +1,13 @@
 package org.opendatamesh.platform.up.executor.gitlabci.resources.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Map;
 
-@Getter
-@Setter
+@Data
 public class GitlabRunResource {
     private String id;
     private String iid;
@@ -38,9 +38,9 @@ public class GitlabRunResource {
     private String coverage;
     @JsonProperty("web_url")
     private String webUrl;
+    private Message message;
 
-    @Getter
-    @Setter
+    @Data
     public static class User {
         private String name;
         private String username;
@@ -51,5 +51,10 @@ public class GitlabRunResource {
         @JsonProperty("web_url")
         private String webUrl;
 
+    }
+
+    @Data
+    public static class Message {
+        private List<String> base;
     }
 }

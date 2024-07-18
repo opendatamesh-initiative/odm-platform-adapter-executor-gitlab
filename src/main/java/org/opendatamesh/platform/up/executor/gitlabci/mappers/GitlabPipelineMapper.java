@@ -6,10 +6,30 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.ConfigurationRes
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabPipelineResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TemplateResource;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 @Mapper(componentModel = "spring")
 public interface GitlabPipelineMapper {
 
+    /**
+     *
+     * @param configuration
+     * @param template
+     * @param callbackRef
+     * @return
+     */
     @Mapping(source = "configuration.params", target = "variables")
     @Mapping(source = "template.branch", target = "ref")
-    GitlabPipelineResource toGitlabPipelineResource(ConfigurationResource configuration, TemplateResource template, String callbackRef);
+    default GitlabPipelineResource toGitlabPipelineResource(ConfigurationResource configuration, TemplateResource template, String callbackRef) {
+        GitlabPipelineResource gitlabPipelineResource = new GitlabPipelineResource();
+        gitlabPipelineResource.setRef(template.getBranch());
+        List<Map<String, String>> variables = new ArrayList<>();
+        for (Map.Entry<String, String> entry : configuration.getParams().entrySet()) {
+            variables.add(Map.of("key", entry.getKey(), "value", entry.getValue()));
+        }
+        gitlabPipelineResource.setVariables(variables);
+        return gitlabPipelineResource;
+    }
 }

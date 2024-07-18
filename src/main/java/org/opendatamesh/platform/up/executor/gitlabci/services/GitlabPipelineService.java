@@ -1,10 +1,13 @@
 package org.opendatamesh.platform.up.executor.gitlabci.services;
 
 import lombok.RequiredArgsConstructor;
+import org.jasypt.encryption.StringEncryptor;
 import org.opendatamesh.platform.core.commons.servers.exceptions.InternalServerException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.NotFoundException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.GitlabClient;
+import org.opendatamesh.platform.up.executor.gitlabci.dao.GitlabInstance;
+import org.opendatamesh.platform.up.executor.gitlabci.dao.GitlabInstanceRepository;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRun;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRunRepository;
 import org.opendatamesh.platform.up.executor.gitlabci.mappers.GitlabPipelineMapper;
@@ -17,6 +20,8 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabRun
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabRunState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -29,15 +34,23 @@ import java.util.concurrent.CompletableFuture;
 @Service
 @RequiredArgsConstructor
 public class GitlabPipelineService {
-    private final GitlabClient gitlabClient;
+    private final GitlabInstanceRepository gitlabInstanceRepository;
     private final GitlabPipelineMapper pipelineMapper;
     private final PipelineRunRepository pipelineRunRepository;
+    @Qualifier("jasyptStringEncryptor")
+    private final StringEncryptor stringEncryptor;
+    @Value("${polling.retries}")
     private Integer pollingNumRetries;
+    @Value("${polling.interval}")
     private Integer pollingIntervalSeconds;
 
     private static final Logger logger = LoggerFactory.getLogger(GitlabPipelineService.class);
 
-    public GitlabRunResource runPipeline(ConfigurationResource configurationResource, TemplateResource templateResource, String callbackRef, Long taskId) {
+    public GitlabRunResource runPipeline(ConfigurationResource configurationResource,
+                                         TemplateResource templateResource,
+                                         String callbackRef,
+                                         Long taskId,
+                                         String gitlabInstanceUrl) {
         GitlabPipelineResource pipelineResource = pipelineMapper.toGitlabPipelineResource(
                 configurationResource, templateResource, callbackRef
         );
@@ -49,6 +62,18 @@ public class GitlabPipelineService {
             );
         }
         logger.info("Calling Gitlab Pipeline API...");
+
+        Optional<GitlabInstance> optGitlabInstance = gitlabInstanceRepository.findById(gitlabInstanceUrl);
+        if (optGitlabInstance.isEmpty()) {
+            throw new UnprocessableEntityException(
+                    ExecutorApiStandardErrors.SC404_01_PIPELINE_RUN_NOT_FOUND,
+                    "Cannot find Gitlab instance with url: " + gitlabInstanceUrl
+            );
+        }
+        GitlabClient gitlabClient = new GitlabClient(
+                optGitlabInstance.get().getInstanceUrl(),
+                stringEncryptor.decrypt(optGitlabInstance.get().getInstanceToken())
+        );
 
         ResponseEntity<GitlabRunResource> gitlabResponse = gitlabClient.postTask(
                 pipelineResource,
@@ -68,21 +93,31 @@ public class GitlabPipelineService {
                             ExecutorApiStandardErrors.SC403_01_EXECUTOR_FORBIDDEN,
                             "User does not have permission to run the pipeline: " + gitlabRunResource
                     );
+                case BAD_REQUEST:
+                    throw new UnprocessableEntityException(
+                            ExecutorApiStandardErrors.SC422_05_TASK_IS_INVALID,
+                            "GitLab responded with a 400 error. Please make sure to have a valid gitlab-ci file and settings."
+                    );
                 default:
                     throw new InternalServerException(
                             ExecutorApiStandardErrors.SC500_50_EXECUTOR_SERVICE_ERROR,
-                            "Azure DevOps responded with an error: " + gitlabRunResource
+                            "Gitlab responded with an error: " + gitlabRunResource
                     );
             }
         }
         try {
             PipelineRun pipelineRun = new PipelineRun();
+            pipelineRun.setTaskId(taskId);
             pipelineRun.setRunId(gitlabRunResource.getId());
             pipelineRun.setProject(templateResource.getProjectId());
             pipelineRun.setStatus(GitlabRunState.valueOf(gitlabRunResource.getStatus()));
             pipelineRun.setCreatedAt(gitlabRunResource.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME));
-            pipelineRun.setFinishedAt(gitlabRunResource.getFinishedAt().format(DateTimeFormatter.ISO_DATE_TIME));
+            pipelineRun.setFinishedAt(
+                    gitlabRunResource.getFinishedAt() != null
+                            ? gitlabRunResource.getFinishedAt().format(DateTimeFormatter.ISO_DATE_TIME)
+                            : null);
             pipelineRun.setVariables(pipelineResource.getVariables());
+            pipelineRun.setGitlabInstanceUrl(gitlabInstanceUrl);
             pipelineRunRepository.saveAndFlush(pipelineRun);
         } catch (Exception e) {
             logger.error("Error during the creation of PipelineRun entry: " + e.getMessage());
@@ -103,9 +138,18 @@ public class GitlabPipelineService {
         int counter = 0;
         ResponseEntity<GitlabRunResource> gitlabResponse = null;
 
+        Optional<GitlabInstance> optGitlabInstance = gitlabInstanceRepository.findById(pipelineRun.getGitlabInstanceUrl());
+        if (optGitlabInstance.isEmpty()) {
+            throw new UnprocessableEntityException(
+                    ExecutorApiStandardErrors.SC404_01_PIPELINE_RUN_NOT_FOUND,
+                    "Cannot find Gitlab instance with id: " + pipelineRun.getGitlabInstanceUrl()
+            );
+        }
+        GitlabClient gitlabClient = new GitlabClient(optGitlabInstance.get().getInstanceUrl(), stringEncryptor.decrypt(optGitlabInstance.get().getInstanceToken()));
+
         while (counter < pollingNumRetries) {
             gitlabResponse = gitlabClient.readTask(pipelineRun.getProject(), pipelineRun.getRunId());
-            if (gitlabResponse.getStatusCode().is2xxSuccessful() && gitlabResponse.getBody().getStatus().equals(GitlabRunState.success)) {
+            if (gitlabResponse.getStatusCode().is2xxSuccessful() && gitlabResponse.getBody().getStatus().equals(GitlabRunState.success.toString())) {
                 break;
             }
             try {
@@ -117,7 +161,7 @@ public class GitlabPipelineService {
             counter++;
         }
         GitlabRunResource responseBody = gitlabResponse.getBody();
-        if(!gitlabResponse.getStatusCode().is2xxSuccessful()) {
+        if (!gitlabResponse.getStatusCode().is2xxSuccessful()) {
             switch (gitlabResponse.getStatusCode()) {
                 case UNAUTHORIZED:
                     throw new InternalServerException(

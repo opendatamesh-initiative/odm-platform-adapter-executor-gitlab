@@ -5,9 +5,7 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabPip
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabRunResource;
 import org.opendatamesh.platform.up.executor.gitlabci.utils.ObjectMapperFactory;
 import org.springframework.http.*;
-import org.springframework.stereotype.Service;
 
-@Service
 public class GitlabClient extends ODMClient {
     private final String gitlabToken;
 

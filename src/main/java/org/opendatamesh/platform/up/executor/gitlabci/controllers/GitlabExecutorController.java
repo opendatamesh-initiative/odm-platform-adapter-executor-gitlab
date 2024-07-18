@@ -13,17 +13,17 @@ import lombok.RequiredArgsConstructor;
 import org.opendatamesh.platform.core.commons.clients.resources.ErrorRes;
 import org.opendatamesh.platform.core.commons.servers.exceptions.InternalServerException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.ConfigurationResource;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.ExecutorApiStandardErrors;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.TaskResource;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.TemplateResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.*;
 import org.opendatamesh.platform.up.executor.gitlabci.services.GitlabPipelineService;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
 @RestController
-@RequestMapping(value = "/tasks")
+@RequestMapping(value = "/api/v1/up/executor/tasks")
 @Validated
 @RequiredArgsConstructor
 @Tag(name = "Tasks", description = "Endpoint associated to connector tasks collection.")
@@ -38,11 +38,13 @@ public class GitlabExecutorController {
             "}";
 
     private static final TaskResource EXAMPLE_TWO = new TaskResource();
+
     static {
         EXAMPLE_TWO.setCallbackRef("my/callback/url");
         EXAMPLE_TWO.setTemplate("\"{\\\"organization\\\":\\\"andreagioia\\\",\\\"project\\\":\\\"opendatamesh\\\",\\\"pipelineId\\\":\\\"3\\\",\\\"branch\\\":\\\"main\\\"}\"");
         EXAMPLE_TWO.setConfigurations("\"{\\\"stagesToSkip\\\":[]}\"");
     }
+
     // ===============================================================================
     // POST /tasks
     // ===============================================================================
@@ -78,13 +80,13 @@ public class GitlabExecutorController {
                     responseCode = "500",
                     description = "[Internal Server Error](https://www.rfc-editor.org/rfc/rfc9110.html#name-500-internal-server-error)"
                             + "\r\n - Error Code 50001 - Error in in the backend service"
-                            + "\r\n - Error Code 50050 - Azure Devops API or not reachable",
+                            + "\r\n - Error Code 50050 - Gitlab API not reachable",
                     content = {@Content(mediaType = "application/json", schema = @Schema(implementation = ErrorRes.class))}
             ),
             @ApiResponse(
                     responseCode = "501",
                     description = "[Bad Gateway](https://www.rfc-editor.org/rfc/rfc9110.html#name-502-bad-gateway)"
-                            + "\r\n - Error Code 50250 - Azure Devops API returns an error",
+                            + "\r\n - Error Code 50250 - Gitlab API returns an error",
                     content = {@Content(mediaType = "application/json", schema = @Schema(implementation = ErrorRes.class))}
             )
     })
@@ -109,24 +111,25 @@ public class GitlabExecutorController {
         TemplateResource template;
         ConfigurationResource configuration;
 
-        if(task.getId() == null) {
+        if (task.getId() == null) {
             throw new UnprocessableEntityException(
                     ExecutorApiStandardErrors.SC422_05_TASK_IS_INVALID,
                     "Task ID is not specified in the task definition."
             );
         }
-        if(task.getConfigurations() == null) {
+        if (task.getConfigurations() == null) {
             throw new UnprocessableEntityException(
                     ExecutorApiStandardErrors.SC422_05_TASK_IS_INVALID,
                     "Configuration is missing in the task definition"
             );
         }
-        if(task.getTemplate() == null) {
+        if (task.getTemplate() == null) {
             throw new UnprocessableEntityException(
                     ExecutorApiStandardErrors.SC422_05_TASK_IS_INVALID,
                     "Template is not specified in the task definition."
             );
         }
+
 
         try {
             template = objectMapper.readValue(task.getTemplate(), TemplateResource.class);
@@ -137,7 +140,60 @@ public class GitlabExecutorController {
         }
 
         String callbackRef = task.getCallbackRef();
-        pipelineService.runPipeline(configuration, template, callbackRef, task.getId());
+        if (configuration.getParams().get("gitlabInstanceUrl") == null) {
+            throw new UnprocessableEntityException(
+                    ExecutorApiStandardErrors.SC422_05_TASK_IS_INVALID,
+                    "Gitlab instance id is not specified in the task definition."
+            );
+        }
+        pipelineService.runPipeline(configuration, template, callbackRef, task.getId(), configuration.getParams().get("gitlabInstanceUrl"));
         return task;
+    }
+
+    @Operation(
+            summary = "Get the task updated version",
+            description = "Get the an updated version of the given task"
+    )
+    @GetMapping(
+            value = "/{taskId}/status"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The requested task status with updated state from Gitlab",
+                    content = {
+                            @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = TaskStatus.class)
+                            )}
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "[Not Found](https://www.rfc-editor.org/rfc/rfc9110.html#name-404-not-found)"
+                            + "\r\n - Error Code 40401 - Pipeline run for Task not found",
+                    content = {
+                            @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorRes.class)
+                            )}
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "[Internal Server Error](https://www.rfc-editor.org/rfc/rfc9110.html#name-500-internal-server-error)"
+                            + "\r\n - Error Code 50050 - Error in in the backend service",
+                    content = {
+                            @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorRes.class)
+                            )}
+            )
+    })
+    public TaskStatus readTaskStatus(@PathVariable Long taskId) {
+        CompletableFuture<TaskStatus> taskStatusAfterPolling = pipelineService.getPipelineStatus(taskId);
+        try {
+            return taskStatusAfterPolling.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -1,4 +1,4 @@
-package org.opendatamesh.platform.up.executor.gitlabci.resources.client;
+package org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;

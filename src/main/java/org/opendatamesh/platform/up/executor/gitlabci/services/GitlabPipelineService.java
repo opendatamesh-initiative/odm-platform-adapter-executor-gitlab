@@ -1,14 +1,12 @@
 package org.opendatamesh.platform.up.executor.gitlabci.services;
 
 import lombok.RequiredArgsConstructor;
-import org.jasypt.encryption.StringEncryptor;
 import org.opendatamesh.platform.core.commons.servers.exceptions.InternalServerException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.NotFoundException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.DevopsServerClient;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.GitlabClient;
-import org.opendatamesh.platform.up.executor.gitlabci.dao.GitlabInstance;
-import org.opendatamesh.platform.up.executor.gitlabci.dao.GitlabInstanceRepository;
+import org.opendatamesh.platform.up.executor.gitlabci.clients.ParamsServiceClient;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRun;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRunRepository;
 import org.opendatamesh.platform.up.executor.gitlabci.mappers.GitlabPipelineMapper;
@@ -16,13 +14,13 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.ConfigurationRes
 import org.opendatamesh.platform.up.executor.gitlabci.resources.ExecutorApiStandardErrors;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TaskStatus;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TemplateResource;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabCallbackResource;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabPipelineResource;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabRunResource;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabRunState;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabCallbackResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabPipelineResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunState;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -34,22 +32,32 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 
+/**
+ * Pipeline service for GitLab pipeline orchestration.
+ */
 @Service
 @RequiredArgsConstructor
 public class GitlabPipelineService {
-    private final GitlabInstanceRepository gitlabInstanceRepository;
     private final GitlabPipelineMapper pipelineMapper;
     private final PipelineRunRepository pipelineRunRepository;
-    @Qualifier("jasyptStringEncryptor")
-    private final StringEncryptor stringEncryptor;
     @Value("${polling.retries}")
     private Integer pollingNumRetries;
     @Value("${polling.interval}")
     private Integer pollingIntervalSeconds;
     private final DevopsServerClient devopsServerClient;
+    private final ParamsServiceClient paramsServiceClient;
 
     private static final Logger logger = LoggerFactory.getLogger(GitlabPipelineService.class);
 
+    /**
+     * Run the GitLab pipeline.
+     * @param configurationResource the configuration for the task.
+     * @param templateResource the template resource given in the data product descriptor.
+     * @param callbackRef the callbck reference.
+     * @param taskId the id of the task to be executed.
+     * @param gitlabInstanceUrl the instance url of the GitLab server.
+     * @return the created and running pipeline.
+     */
     public GitlabRunResource runPipeline(ConfigurationResource configurationResource,
                                          TemplateResource templateResource,
                                          String callbackRef,
@@ -67,16 +75,16 @@ public class GitlabPipelineService {
         }
         logger.info("Calling Gitlab Pipeline API...");
 
-        Optional<GitlabInstance> optGitlabInstance = gitlabInstanceRepository.findById(gitlabInstanceUrl);
-        if (optGitlabInstance.isEmpty()) {
+        ResponseEntity<ParamResource> optGitlabInstance = paramsServiceClient.getParamByName(gitlabInstanceUrl);
+        if (optGitlabInstance.getStatusCode().is4xxClientError()) {
             throw new UnprocessableEntityException(
                     ExecutorApiStandardErrors.SC404_01_PIPELINE_RUN_NOT_FOUND,
                     "Cannot find Gitlab instance with url: " + gitlabInstanceUrl
             );
         }
         GitlabClient gitlabClient = new GitlabClient(
-                optGitlabInstance.get().getInstanceUrl(),
-                stringEncryptor.decrypt(optGitlabInstance.get().getInstanceToken())
+                optGitlabInstance.getBody().getParamName(),
+                optGitlabInstance.getBody().getParamValue()
         );
 
         ResponseEntity<GitlabRunResource> gitlabResponse = gitlabClient.postTask(
@@ -130,6 +138,11 @@ public class GitlabPipelineService {
         return gitlabRunResource;
     }
 
+    /**
+     * Poll the GitLab server asking the status of the running pipeline.
+     * @param taskId the id of the task to be checked.
+     * @return the status of the pipeline.
+     */
     @Async
     public CompletableFuture<TaskStatus> getPipelineStatus(Long taskId) {
         Optional<PipelineRun> optionalPipelineRun = pipelineRunRepository.findById(taskId);
@@ -142,14 +155,17 @@ public class GitlabPipelineService {
         int counter = 0;
         ResponseEntity<GitlabRunResource> gitlabResponse = null;
 
-        Optional<GitlabInstance> optGitlabInstance = gitlabInstanceRepository.findById(pipelineRun.getGitlabInstanceUrl());
-        if (optGitlabInstance.isEmpty()) {
+        ResponseEntity<ParamResource> optGitlabInstance = paramsServiceClient.getParamByName(pipelineRun.getGitlabInstanceUrl());
+        if (optGitlabInstance.getStatusCode().is4xxClientError()) {
             throw new UnprocessableEntityException(
                     ExecutorApiStandardErrors.SC404_01_PIPELINE_RUN_NOT_FOUND,
-                    "Cannot find Gitlab instance with id: " + pipelineRun.getGitlabInstanceUrl()
+                    "Cannot find Gitlab instance with url: " + pipelineRun.getGitlabInstanceUrl()
             );
         }
-        GitlabClient gitlabClient = new GitlabClient(optGitlabInstance.get().getInstanceUrl(), stringEncryptor.decrypt(optGitlabInstance.get().getInstanceToken()));
+        GitlabClient gitlabClient = new GitlabClient(
+                optGitlabInstance.getBody().getParamName(),
+                optGitlabInstance.getBody().getParamValue()
+        );
 
         while (counter < pollingNumRetries) {
             gitlabResponse = gitlabClient.readTask(pipelineRun.getProject(), pipelineRun.getRunId());
@@ -201,6 +217,13 @@ public class GitlabPipelineService {
         }
     }
 
+    /**
+     * Send the OK or FAILED status to the ODM devops server after a GitLab webhook event is received.
+     * The following checks are performed:
+     * - the webhook object kind is "pipeline".
+     * - the status is either success of failure.
+     * @param callbackResource the callback resource object to be sent to devops module.
+     */
     public void sendPipelineSuccessCallback(GitlabCallbackResource callbackResource) {
         if (Objects.equals(callbackResource.getObjectKind(), "pipeline") && callbackResource.getObjectAttributes().getStatus().equals(GitlabRunState.success.toString())) {
             Optional<PipelineRun> optPipelineRun = pipelineRunRepository.findByProjectAndRunId(

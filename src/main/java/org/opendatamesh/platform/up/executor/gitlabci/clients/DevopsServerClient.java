@@ -9,13 +9,20 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
+/**
+ * Service class to connect to the OpenDataMesh devops service.
+ */
 @Service
 public class DevopsServerClient extends ODMClient {
 
-    public DevopsServerClient(@Value("${odm.productplane.devopsservice.address}") String serverAddress) {
+    public DevopsServerClient(@Value("${odm.productplane.devops-service.address}") String serverAddress) {
         super(serverAddress, ObjectMapperFactory.JSON_MAPPER);
     }
 
+    /**
+     * Make an API request to stop the task on the ODM devops side.
+     * @param taskId the id of the task to be stopped.
+     */
     public void stopTask(Long taskId) {
         String httpUrl = apiUrl(DevopsServerApiRoutes.STOP_TASK);
         rest.exchange(

@@ -1,14 +1,13 @@
 package org.opendatamesh.platform.up.executor.gitlabci.dao;
 
 import lombok.Data;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabRunState;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabVariable;
-import org.opendatamesh.platform.up.executor.gitlabci.utils.HashMapConverter;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunState;
 import org.opendatamesh.platform.up.executor.gitlabci.utils.ListMapConverter;
 
 import javax.persistence.*;
 import java.util.List;
 import java.util.Map;
+
 
 @Data
 @Entity(name = "PielineRun")

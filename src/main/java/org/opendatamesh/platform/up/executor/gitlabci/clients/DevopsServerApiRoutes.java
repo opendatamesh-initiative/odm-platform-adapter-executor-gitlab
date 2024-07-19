@@ -2,6 +2,9 @@ package org.opendatamesh.platform.up.executor.gitlabci.clients;
 
 import org.opendatamesh.platform.core.commons.clients.ODMApiRoutes;
 
+/**
+ * Enumeration that contains the routes to the ODM devops module.
+ */
 public enum DevopsServerApiRoutes implements ODMApiRoutes {
 
     STOP_TASK("/api/v1/pp/devops/tasks/{taskId}/status?action=stop");

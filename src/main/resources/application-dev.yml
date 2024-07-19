@@ -1,13 +1,14 @@
 ################
 # Server Config
 ################
-server:
-  port: 9004
-
 odm:
   productplane:
-    devopsservice:
+    devops-service:
       address: http://localhost:8002
+    params-service:
+      address: http://localhost:8004
+      client-uuid: paramclient123
+      client-prefix: DEVOPS_GITLAB_
 
 ################
 # Pipeline Polling Config
@@ -23,7 +24,7 @@ spring:
   profile: dev
   security:
     encryptor:
-      secret: ${ENCRYPTOR_SECRET}
+
   jpa:
     hibernate:
       #ddl-auto: validate

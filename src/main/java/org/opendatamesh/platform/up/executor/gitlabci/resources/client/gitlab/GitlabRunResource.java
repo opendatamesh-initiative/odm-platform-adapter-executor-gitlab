@@ -1,11 +1,10 @@
-package org.opendatamesh.platform.up.executor.gitlabci.resources.client;
+package org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Map;
 
 @Data
 public class GitlabRunResource {

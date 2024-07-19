@@ -7,8 +7,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
-import org.opendatamesh.platform.up.executor.gitlabci.dao.GitlabInstance;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.GitlabConfigResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabConfigResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
 import org.opendatamesh.platform.up.executor.gitlabci.services.GitlabConfigService;
 import org.opendatamesh.platform.up.executor.gitlabci.services.GitlabPipelineService;
 import org.springframework.http.HttpStatus;
@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Controller to manage the configuration endpoints.
+ */
 @RestController
 @RequestMapping(value = "/config")
 @RequiredArgsConstructor
 public class GitlabConfigController {
-    private final GitlabPipelineService pipelineService;
     private final GitlabConfigService gitlabConfigService;
 
     private final static String EXAMPLE_SUCCESS = "{\n" +
@@ -40,7 +42,7 @@ public class GitlabConfigController {
                     description = "Config created successfully",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = GitlabInstance.class),
+                            schema = @Schema(implementation = ParamResource.class),
                             examples = {
                                     @ExampleObject(name = "success", value = EXAMPLE_SUCCESS)
                             }
@@ -60,7 +62,7 @@ public class GitlabConfigController {
                     "application/json"
             }
     )
-    public GitlabInstance createInstance(@RequestBody GitlabConfigResource configResource) {
+    public ParamResource createInstance(@RequestBody GitlabConfigResource configResource) {
         return gitlabConfigService.addConfig(configResource);
     }
 
@@ -75,7 +77,7 @@ public class GitlabConfigController {
                     "application/json"
             }
     )
-    public List<GitlabInstance> getInstanceList() {
+    public List<ParamResource> getInstanceList() {
         return gitlabConfigService.getAllGitlabInstances();
     }
 

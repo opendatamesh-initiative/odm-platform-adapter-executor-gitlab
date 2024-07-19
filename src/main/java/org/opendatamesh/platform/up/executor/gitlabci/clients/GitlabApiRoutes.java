@@ -2,6 +2,9 @@ package org.opendatamesh.platform.up.executor.gitlabci.clients;
 
 import org.opendatamesh.platform.core.commons.clients.ODMApiRoutes;
 
+/**
+ * Enumeration that contains the routes to the gitlab APIs.
+ */
 public enum GitlabApiRoutes implements ODMApiRoutes {
 
     GITLAB_PIPELINE_STATUS("/api/v4/projects/{projectId}/pipelines/{pipelineId}"),

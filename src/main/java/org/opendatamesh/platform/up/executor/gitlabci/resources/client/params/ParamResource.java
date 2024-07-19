@@ -1,6 +1,5 @@
 package org.opendatamesh.platform.up.executor.gitlabci.resources.client.params;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,7 +31,6 @@ public class ParamResource {
     @Schema(description = "Description of the parameter")
     private String description;
 
-    @JsonIgnore
     @JsonProperty("secret")
     @Schema(description = "Whether the value of the parameter is a secret or not", defaultValue = "false")
     private Boolean secret;

@@ -25,6 +25,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -79,8 +80,8 @@ public class GitlabPipelineService {
             );
         }
         GitlabClient gitlabClient = new GitlabClient(
-                optGitlabInstance.getBody().getParamName(),
-                optGitlabInstance.getBody().getParamValue()
+                Objects.requireNonNull(optGitlabInstance.getBody()).getParamName(),
+                Objects.requireNonNull(optGitlabInstance.getBody()).getParamValue()
         );
 
         ResponseEntity<GitlabRunResource> gitlabResponse = gitlabClient.postTask(
@@ -115,20 +116,22 @@ public class GitlabPipelineService {
         }
         try {
             PipelineRun pipelineRun = new PipelineRun();
-            pipelineRun.setTaskId(taskId);
-            pipelineRun.setRunId(gitlabRunResource.getId());
-            pipelineRun.setProject(templateResource.getProjectId());
-            pipelineRun.setStatus(GitlabRunState.valueOf(gitlabRunResource.getStatus()));
-            pipelineRun.setCreatedAt(gitlabRunResource.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME));
-            pipelineRun.setFinishedAt(
-                    gitlabRunResource.getFinishedAt() != null
-                            ? gitlabRunResource.getFinishedAt().format(DateTimeFormatter.ISO_DATE_TIME)
-                            : null);
-            pipelineRun.setVariables(pipelineResource.getVariables());
-            pipelineRun.setGitlabInstanceUrl(gitlabInstanceUrl);
-            pipelineRunRepository.saveAndFlush(pipelineRun);
+            if(gitlabRunResource!=null) {
+                pipelineRun.setTaskId(taskId);
+                pipelineRun.setRunId(gitlabRunResource.getId());
+                pipelineRun.setProject(templateResource.getProjectId());
+                pipelineRun.setStatus(GitlabRunState.valueOf(gitlabRunResource.getStatus()));
+                pipelineRun.setCreatedAt(gitlabRunResource.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME));
+                pipelineRun.setFinishedAt(
+                        gitlabRunResource.getFinishedAt() != null
+                                ? gitlabRunResource.getFinishedAt().format(DateTimeFormatter.ISO_DATE_TIME)
+                                : null);
+                pipelineRun.setVariables(pipelineResource.getVariables());
+                pipelineRun.setGitlabInstanceUrl(gitlabInstanceUrl);
+                pipelineRunRepository.saveAndFlush(pipelineRun);
+            }
         } catch (Exception e) {
-            logger.error("Error during the creation of PipelineRun entry: " + e.getMessage());
+            logger.error("Error during the creation of PipelineRun entry: {}", e.getMessage());
         }
         logger.info("Pipeline run triggered successfully");
         return gitlabRunResource;
@@ -159,47 +162,55 @@ public class GitlabPipelineService {
             );
         }
         GitlabClient gitlabClient = new GitlabClient(
-                optGitlabInstance.getBody().getParamName(),
-                optGitlabInstance.getBody().getParamValue()
+                Objects.requireNonNull(optGitlabInstance.getBody()).getParamName(),
+                Objects.requireNonNull(optGitlabInstance.getBody()).getParamValue()
         );
 
         while (counter < pollingNumRetries) {
             gitlabResponse = gitlabClient.readTask(pipelineRun.getProject(), pipelineRun.getRunId());
-            if (gitlabResponse.getStatusCode().is2xxSuccessful() && gitlabResponse.getBody().getStatus().equals(GitlabRunState.success.toString())) {
+            if (gitlabResponse.getStatusCode().is2xxSuccessful() && Objects.requireNonNull(gitlabResponse.getBody()).getStatus().equals(GitlabRunState.success.toString())) {
                 break;
             }
             try {
-                Thread.sleep(pollingIntervalSeconds * 1000);
+                Thread.sleep((long) pollingIntervalSeconds);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 logger.warn("Polling thread error: " + e.getMessage());
             }
             counter++;
         }
-        GitlabRunResource responseBody = gitlabResponse.getBody();
-        if (!gitlabResponse.getStatusCode().is2xxSuccessful()) {
-            switch (gitlabResponse.getStatusCode()) {
-                case UNAUTHORIZED:
-                    throw new InternalServerException(
-                            ExecutorApiStandardErrors.SC401_01_EXECUTOR_UNATHORIZED,
-                            "Missing credentials - " + gitlabResponse
-                    );
-                case FORBIDDEN:
-                    throw new InternalServerException(
-                            ExecutorApiStandardErrors.SC403_01_EXECUTOR_FORBIDDEN,
-                            "User does not have the permission to get the run infos - " + gitlabResponse
-                    );
-                default:
-                    throw new InternalServerException(
-                            ExecutorApiStandardErrors.SC500_50_EXECUTOR_SERVICE_ERROR,
-                            "Azure DevOps responded with an error: " + gitlabResponse
-                    );
+        if(gitlabResponse!=null) {
+            GitlabRunResource responseBody = gitlabResponse.getBody();
+            if (!gitlabResponse.getStatusCode().is2xxSuccessful()) {
+                switch (gitlabResponse.getStatusCode()) {
+                    case UNAUTHORIZED:
+                        throw new InternalServerException(
+                                ExecutorApiStandardErrors.SC401_01_EXECUTOR_UNATHORIZED,
+                                "Missing credentials - " + gitlabResponse
+                        );
+                    case FORBIDDEN:
+                        throw new InternalServerException(
+                                ExecutorApiStandardErrors.SC403_01_EXECUTOR_FORBIDDEN,
+                                "User does not have the permission to get the run infos - " + gitlabResponse
+                        );
+                    default:
+                        throw new InternalServerException(
+                                ExecutorApiStandardErrors.SC500_50_EXECUTOR_SERVICE_ERROR,
+                                "Azure DevOps responded with an error: " + gitlabResponse
+                        );
+                }
             }
-        }
-        pipelineRun.setStatus(GitlabRunState.valueOf(responseBody.getStatus()));
-        pipelineRun.setFinishedAt(responseBody.getFinishedAt().format(DateTimeFormatter.ISO_DATE_TIME));
+            else if(responseBody==null) {
+                throw new InternalServerException(
+                        ExecutorApiStandardErrors.SC401_01_EXECUTOR_UNATHORIZED,
+                        "Response body is null!"
+                );
+            }
+            pipelineRun.setStatus(GitlabRunState.valueOf(responseBody.getStatus()));
+            pipelineRun.setFinishedAt(responseBody.getFinishedAt().format(DateTimeFormatter.ISO_DATE_TIME));
 
-        pipelineRunRepository.saveAndFlush(pipelineRun);
+            pipelineRunRepository.saveAndFlush(pipelineRun);
+        }
 
         switch (pipelineRun.getStatus()) {
             case success:

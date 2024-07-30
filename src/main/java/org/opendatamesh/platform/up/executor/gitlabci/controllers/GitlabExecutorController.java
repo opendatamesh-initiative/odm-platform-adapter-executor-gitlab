@@ -22,6 +22,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+
+/**
+ * Controller to manage the creation and monitoring of GitLab pipelines.
+ */
 @RestController
 @RequestMapping(value = "/api/v1/up/executor/tasks")
 @Validated
@@ -107,6 +111,11 @@ public class GitlabExecutorController {
         return createTask(task);
     }
 
+    /**
+     * Create a task based on the input received from the ODM DevOps module.
+     * @param task the received task
+     * @return the created task after a validation.
+     */
     public TaskResource createTask(TaskResource task) {
 
         ObjectMapper objectMapper = new ObjectMapper();

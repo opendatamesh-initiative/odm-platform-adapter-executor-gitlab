@@ -76,10 +76,16 @@ public class GitlabConfigController {
                     "application/json"
             }
     )
+    /**
+     * @return the list of configurations from the parameter server.
+     */
     public List<ParamResource> getInstanceList() {
         return gitlabConfigService.getAllGitlabInstances();
     }
 
+    /**
+     * Delete a configuration from the parameter server.
+     */
     @DeleteMapping
     @ResponseStatus(HttpStatus.OK)
     public void deleteInstance(@RequestParam String gitlabInstanceId) {

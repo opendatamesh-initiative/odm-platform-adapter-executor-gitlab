@@ -199,12 +199,8 @@ public class GitlabExecutorController {
                             )}
             )
     })
-    public TaskStatus readTaskStatus(@PathVariable Long taskId) {
+    public TaskStatus readTaskStatus(@PathVariable Long taskId) throws ExecutionException, InterruptedException {
         CompletableFuture<TaskStatus> taskStatusAfterPolling = pipelineService.getPipelineStatus(taskId);
-        try {
-            return taskStatusAfterPolling.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
+        return taskStatusAfterPolling.get();
     }
 }

@@ -28,6 +28,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
@@ -318,7 +319,7 @@ public class GitlabExecutorControllerTest {
     }
 
     @Test
-    public void testReadTaskSuccess() throws JsonProcessingException {
+    public void testReadTaskSuccess() throws JsonProcessingException, ExecutionException, InterruptedException {
         wireMockServer = new WireMockServer();
 
         WireMock.stubFor(get(urlMatching("/api/v4/projects/1000/pipelines/1"))
@@ -346,7 +347,7 @@ public class GitlabExecutorControllerTest {
 
     @Test
     public void testReadTaskNotExistingPipeline() {
-        Assertions.assertThrows(RuntimeException.class, () -> executorController.readTaskStatus(4L));
+        Assertions.assertThrows(ExecutionException.class, () -> executorController.readTaskStatus(4L));
     }
 
     @Test
@@ -371,7 +372,7 @@ public class GitlabExecutorControllerTest {
                 )
         );
 
-        Assertions.assertThrows(RuntimeException.class, () -> executorController.readTaskStatus(1L));
+        Assertions.assertThrows(ExecutionException.class, () -> executorController.readTaskStatus(1L));
         wireMockServer.stop();
 
     }
@@ -398,7 +399,7 @@ public class GitlabExecutorControllerTest {
                 )
         );
 
-        Assertions.assertThrows(RuntimeException.class, () -> executorController.readTaskStatus(1L));
+        Assertions.assertThrows(ExecutionException.class, () -> executorController.readTaskStatus(1L));
         wireMockServer.stop();
     }
 
@@ -424,7 +425,7 @@ public class GitlabExecutorControllerTest {
                 )
         );
 
-        Assertions.assertThrows(RuntimeException.class, () -> executorController.readTaskStatus(1L));
+        Assertions.assertThrows(ExecutionException.class, () -> executorController.readTaskStatus(1L));
         wireMockServer.stop();
     }
 }

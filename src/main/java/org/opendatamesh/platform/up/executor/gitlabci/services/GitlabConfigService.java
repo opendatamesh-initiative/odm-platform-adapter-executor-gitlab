@@ -8,6 +8,7 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.ExecutorApiStand
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabConfigResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -46,18 +47,16 @@ public class GitlabConfigService {
 
         ResponseEntity<ParamResource> createdParam = paramsServiceClient.createParam(paramResource);
         if (!createdParam.getStatusCode().is2xxSuccessful()) {
-            switch (createdParam.getStatusCode()) {
-                case CONFLICT:
-                    throw new ConflictException(
-                            ExecutorApiStandardErrors.SC409_02_ALREADY_EXISTS,
-                            "The parameter already exists"
-                    );
-                default:
-                    throw new UnprocessableEntityException(
-                            ExecutorApiStandardErrors.SC500_50_EXECUTOR_SERVICE_ERROR,
-                            "Internal server error"
-                    );
+            if (createdParam.getStatusCode() == HttpStatus.CONFLICT) {
+                throw new ConflictException(
+                        ExecutorApiStandardErrors.SC409_02_ALREADY_EXISTS,
+                        "The parameter already exists"
+                );
             }
+            throw new UnprocessableEntityException(
+                    ExecutorApiStandardErrors.SC500_50_EXECUTOR_SERVICE_ERROR,
+                    "Internal server error"
+            );
         }
         return createdParam.getBody();
     }

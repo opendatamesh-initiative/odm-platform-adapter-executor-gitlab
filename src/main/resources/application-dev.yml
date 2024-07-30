@@ -4,7 +4,7 @@
 odm:
   productplane:
     devops-service:
-      address: http://localhost:8002
+
     params-service:
       address: http://localhost:8004
       client-uuid: paramclient123

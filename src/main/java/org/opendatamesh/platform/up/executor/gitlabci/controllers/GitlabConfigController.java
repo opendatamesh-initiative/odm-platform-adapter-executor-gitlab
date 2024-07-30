@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabConfigResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
 import org.opendatamesh.platform.up.executor.gitlabci.services.GitlabConfigService;
-import org.opendatamesh.platform.up.executor.gitlabci.services.GitlabPipelineService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 

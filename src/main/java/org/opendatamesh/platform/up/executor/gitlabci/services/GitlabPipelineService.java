@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.opendatamesh.platform.core.commons.servers.exceptions.InternalServerException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.NotFoundException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
-import org.opendatamesh.platform.up.executor.gitlabci.clients.DevopsServerClient;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.GitlabClient;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.ParamsServiceClient;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRun;
@@ -14,7 +13,6 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.ConfigurationRes
 import org.opendatamesh.platform.up.executor.gitlabci.resources.ExecutorApiStandardErrors;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TaskStatus;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TemplateResource;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabCallbackResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabPipelineResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunState;
@@ -27,7 +25,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -44,7 +41,6 @@ public class GitlabPipelineService {
     private Integer pollingNumRetries;
     @Value("${polling.interval}")
     private Integer pollingIntervalSeconds;
-    private final DevopsServerClient devopsServerClient;
     private final ParamsServiceClient paramsServiceClient;
 
     private static final Logger logger = LoggerFactory.getLogger(GitlabPipelineService.class);
@@ -214,23 +210,6 @@ public class GitlabPipelineService {
                 return CompletableFuture.completedFuture(TaskStatus.ABORTED);
             default:
                 return CompletableFuture.completedFuture(null);
-        }
-    }
-
-    /**
-     * Send the OK or FAILED status to the ODM devops server after a GitLab webhook event is received.
-     * The following checks are performed:
-     * - the webhook object kind is "pipeline".
-     * - the status is either success of failure.
-     * @param callbackResource the callback resource object to be sent to devops module.
-     */
-    public void sendPipelineSuccessCallback(GitlabCallbackResource callbackResource) {
-        if (Objects.equals(callbackResource.getObjectKind(), "pipeline") && callbackResource.getObjectAttributes().getStatus().equals(GitlabRunState.success.toString())) {
-            Optional<PipelineRun> optPipelineRun = pipelineRunRepository.findByProjectAndRunId(
-                    String.valueOf(callbackResource.getProject().getId()),
-                    String.valueOf(callbackResource.getObjectAttributes().getId()));
-
-            optPipelineRun.ifPresent(pipelineRun -> devopsServerClient.stopTask(pipelineRun.getTaskId()));
         }
     }
 }

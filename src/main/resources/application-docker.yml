@@ -29,16 +29,20 @@ polling:
 ################
 spring:
   profile: docker
+  security:
+    encryptor:
 
   jpa:
     hibernate:
-      #ddl-auto: validate
+      ddl-auto: update
       show-sql: true
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
-    database-platform: org.hibernate.dialect.H2Dialect
+    # database-platform: org.hibernate.dialect.H2Dialect
     properties:
       hibernate:
+        hbm2ddl:
+          create_namespaces: true
         jdbc:
           lob:
             non_contextual_creation: true
@@ -48,10 +52,10 @@ spring:
     url: ${DATABASE_URL}?allowPublicKeyRetrieval=true&useSSL=false
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+  #h2:
+  #  console:
+  #    enabled: true
+  #    path: /h2-console
 
   # Flyway https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html#appendix.application-properties.data-migration
   flyway:

@@ -8,7 +8,6 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.opendatamesh.platform.core.commons.servers.exceptions.NotFoundException;
 import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRun;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRunRepository;

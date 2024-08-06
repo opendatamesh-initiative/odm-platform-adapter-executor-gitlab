@@ -1,0 +1,47 @@
+name: odm-platform-adapter-executor-gitlab CI/CD
+on:
+  release:
+    types: [created]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+      - name: Get Git Tag
+        run: |
+          TAG_VERSION=$( echo ${{github.ref_name}} | sed 's/[^0-9.]//g' )
+          echo "TAG_VERSION=${TAG_VERSION}" >> $GITHUB_ENV
+      - name: Get Maven Version
+        run: |
+          MAVEN_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "MAVEN_VERSION=${MAVEN_VERSION}" >> $GITHUB_ENV
+      - name: Check Tag and Version Match
+        run: |
+          if [ "${{ env.TAG_VERSION }}" != "${{ env.MAVEN_VERSION }}" ]; then
+            echo "Git tag (${{ env.TAG_VERSION }}) does not match POM version (${{ env.MAVEN_VERSION }})"
+            exit 1
+          fi
+      - name: Publish package
+        run: mvn --batch-mode deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Docker images
+        run: docker build . --file Dockerfile --tag odm-platform-adapter-executor-gitlab --label "runnumber=${GITHUB_RUN_ID}"
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+      - name: Push images to GitHub Container Registry
+        run:  IMAGE_ID=ghcr.io/opendatamesh-initiative/odm-platform-adapter-executor-gitlab
+              IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+              echo IMAGE_ID=$IMAGE_ID
+              docker tag odm-platform-adapter-executor-gitlab $IMAGE_ID:${{ env.TAG_VERSION }}
+              docker push $IMAGE_ID:${{ env.TAG_VERSION }}

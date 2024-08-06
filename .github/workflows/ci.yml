@@ -1,0 +1,27 @@
+name: odm-platform-adapter-executor-gitlab CI
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+      - name: Execute tests with Maven
+        run: mvn -B test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

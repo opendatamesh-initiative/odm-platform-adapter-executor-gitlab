@@ -20,7 +20,7 @@ public class GitlabClient {
     private final String gitlabToken;
     protected String serverAddress;
     protected ObjectMapper mapper;
-    public TestRestTemplate rest;
+    public TestRestTemplate rest = new TestRestTemplate();
 
     public GitlabClient(String serverAddress, String gitlabToken) {
         this.serverAddress = serverAddress;

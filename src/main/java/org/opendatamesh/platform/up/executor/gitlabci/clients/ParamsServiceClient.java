@@ -30,7 +30,7 @@ public class ParamsServiceClient {
     private static final Logger logger = LoggerFactory.getLogger(GitlabPipelineService.class);
     protected String serverAddress;
     protected ObjectMapper mapper;
-    public TestRestTemplate rest;
+    public TestRestTemplate rest = new TestRestTemplate();
     /**
      * The client UUID to authenticate with the service, in order to retrieve the secret value decrypted.
      */

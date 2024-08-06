@@ -1,11 +1,13 @@
 package org.opendatamesh.platform.up.executor.gitlabci.clients;
 
+import lombok.Getter;
 import org.opendatamesh.platform.core.commons.clients.ODMApiRoutes;
 
 /**
  * Enumeration that contains the routes to the gitlab APIs.
  */
-public enum GitlabApiRoutes implements ODMApiRoutes {
+@Getter
+public enum GitlabApiRoutes {
 
     GITLAB_PIPELINE_STATUS("/api/v4/projects/{projectId}/pipelines/{pipelineId}"),
     GITLAB_PIPELINE_RUN("/api/v4/projects/{projectId}/pipeline");
@@ -21,8 +23,4 @@ public enum GitlabApiRoutes implements ODMApiRoutes {
         return this.path;
     }
 
-    @Override
-    public String getPath() {
-        return path;
-    }
 }

@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutionException;
  * Controller to manage the creation and monitoring of GitLab pipelines.
  */
 @RestController
-@RequestMapping(value = "/api/v1/up/executor/tasks")
+@RequestMapping(value = "/tasks")
 @Validated
 @RequiredArgsConstructor
 @Tag(name = "Tasks", description = "Endpoint associated to connector tasks collection.")

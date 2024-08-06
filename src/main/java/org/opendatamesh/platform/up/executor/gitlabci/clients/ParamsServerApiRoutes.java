@@ -1,11 +1,12 @@
 package org.opendatamesh.platform.up.executor.gitlabci.clients;
 
-import org.opendatamesh.platform.core.commons.clients.ODMApiRoutes;
+import lombok.Getter;
 
 /**
  * Enumeration that contains the routes to the ODM parameters module.
  */
-public enum ParamsServerApiUrl implements ODMApiRoutes {
+@Getter
+public enum ParamsServerApiRoutes {
     ADD_PARAM("/api/v1/pp/params/params/"),
     GET_PARAMS("/api/v1/pp/params/params"),
     GET_PARAM_BY_ID("/api/v1/pp/params/params/{paramId}"),
@@ -14,7 +15,7 @@ public enum ParamsServerApiUrl implements ODMApiRoutes {
 
     private final String path;
 
-    ParamsServerApiUrl(String path) {
+    ParamsServerApiRoutes(String path) {
         this.path = path;
     }
 
@@ -23,8 +24,4 @@ public enum ParamsServerApiUrl implements ODMApiRoutes {
         return this.path;
     }
 
-    @Override
-    public String getPath() {
-        return path;
-    }
 }

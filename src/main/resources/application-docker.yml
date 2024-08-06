@@ -69,8 +69,8 @@ spring:
 ################
 # Enable logging leven (log each HTTP parameter)
 ################
-#logging:
-#  level:
-#    org:
-#      apache:
-#        http: DEBUG
+logging:
+  level:
+    org:
+      apache:
+        http: ${HTTP_LOG_LEVEL:INFO}

@@ -211,6 +211,7 @@ public class GitlabPipelineService {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 logger.warn("Polling thread error: " + e.getMessage());
+                throw new InternalServerException("Polling thread error: " + e.getMessage());
             }
             counter++;
         }

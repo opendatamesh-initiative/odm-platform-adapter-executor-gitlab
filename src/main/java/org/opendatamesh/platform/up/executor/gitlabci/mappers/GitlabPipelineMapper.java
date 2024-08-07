@@ -22,13 +22,14 @@ public interface GitlabPipelineMapper {
      */
     @Mapping(source = "configuration.params", target = "variables")
     @Mapping(source = "template.branch", target = "ref")
-    default GitlabPipelineResource toGitlabPipelineResource(ConfigurationResource configuration, TemplateResource template, String callbackRef) {
+    default GitlabPipelineResource toGitlabPipelineResource(ConfigurationResource configuration, TemplateResource template, String callbackRef, Long taskId) {
         GitlabPipelineResource gitlabPipelineResource = new GitlabPipelineResource();
         gitlabPipelineResource.setRef(template.getBranch());
         List<Map<String, String>> variables = new ArrayList<>();
         for (Map.Entry<String, String> entry : configuration.getParams().entrySet()) {
             variables.add(Map.of("key", entry.getKey(), "value", entry.getValue()));
         }
+        variables.add(Map.of("key", "taskId", "value", taskId.toString()));
         gitlabPipelineResource.setVariables(variables);
         return gitlabPipelineResource;
     }

@@ -61,7 +61,7 @@ public class GitlabPipelineService {
                                                  Long taskId,
                                                  String gitlabInstanceUrl) throws UnprocessableEntityException {
         GitlabPipelineResource pipelineResource = pipelineMapper.toGitlabPipelineResource(
-                configurationResource, templateResource, callbackRef
+                configurationResource, templateResource, callbackRef, taskId
         );
 
         if (templateResource.getBranch() == null || templateResource.getProjectId() == null) {

@@ -7,7 +7,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 
 @Data
-public class GitlabRunResource {
+public class GitlabRunResourceResponse {
     private String id;
     private String iid;
     @JsonProperty("project_id")

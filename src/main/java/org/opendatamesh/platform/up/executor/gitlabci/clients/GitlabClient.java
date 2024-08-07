@@ -2,7 +2,7 @@ package org.opendatamesh.platform.up.executor.gitlabci.clients;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabPipelineResource;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunResourceResponse;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.GitlabClientException;
 import org.opendatamesh.platform.up.executor.gitlabci.utils.ObjectMapperFactory;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -35,7 +35,7 @@ public class GitlabClient {
      * @param projectId        the id of the gitlab project.
      * @return the created GitLab pipeline.
      */
-    public ResponseEntity<GitlabRunResource> postTask(GitlabPipelineResource pipelineResource, String projectId) {
+    public ResponseEntity<GitlabRunResourceResponse> postTask(GitlabPipelineResource pipelineResource, String projectId) {
         HttpEntity<GitlabPipelineResource> entity = new HttpEntity<>(pipelineResource, getHttpHeaders());
 
         try {
@@ -43,7 +43,7 @@ public class GitlabClient {
                     apiUrl(GitlabApiRoutes.GITLAB_PIPELINE_RUN),
                     HttpMethod.POST,
                     entity,
-                    GitlabRunResource.class,
+                    GitlabRunResourceResponse.class,
                     projectId
             );
         } catch (HttpClientErrorException e) {
@@ -58,14 +58,14 @@ public class GitlabClient {
      * @param pipelineId the id of the running pipeline.
      * @return the status of the GitLab pipeline.
      */
-    public ResponseEntity<GitlabRunResource> readTask(String projectId, String pipelineId) {
+    public ResponseEntity<GitlabRunResourceResponse> readTask(String projectId, String pipelineId) {
         HttpEntity<GitlabPipelineResource> entity = new HttpEntity<>(getHttpHeaders());
         try {
             return rest.exchange(
                     apiUrl(GitlabApiRoutes.GITLAB_PIPELINE_STATUS),
                     HttpMethod.GET,
                     entity,
-                    GitlabRunResource.class,
+                    GitlabRunResourceResponse.class,
                     projectId,
                     pipelineId
             );

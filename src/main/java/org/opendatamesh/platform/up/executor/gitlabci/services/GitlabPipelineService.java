@@ -14,7 +14,7 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.ExecutorApiStand
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TaskStatus;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TemplateResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabPipelineResource;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunResourceResponse;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunState;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
 import org.slf4j.Logger;
@@ -38,9 +38,9 @@ import java.util.concurrent.CompletableFuture;
 public class GitlabPipelineService {
     private final GitlabPipelineMapper pipelineMapper;
     private final PipelineRunRepository pipelineRunRepository;
-    @Value("${polling.retries}")
+    @Value("${odm.executors.gitlab.pipelines-config.polling.retries}")
     private Integer pollingNumRetries;
-    @Value("${polling.interval}")
+    @Value("${odm.executors.gitlab.pipelines-config.polling.interval}")
     private Integer pollingIntervalSeconds;
     private final ParamsServiceClient paramsServiceClient;
 
@@ -55,11 +55,11 @@ public class GitlabPipelineService {
      * @param gitlabInstanceUrl the instance url of the GitLab server.
      * @return the created and running pipeline.
      */
-    public GitlabRunResource runPipeline(ConfigurationResource configurationResource,
-                                         TemplateResource templateResource,
-                                         String callbackRef,
-                                         Long taskId,
-                                         String gitlabInstanceUrl) {
+    public GitlabRunResourceResponse runPipeline(ConfigurationResource configurationResource,
+                                                 TemplateResource templateResource,
+                                                 String callbackRef,
+                                                 Long taskId,
+                                                 String gitlabInstanceUrl) throws UnprocessableEntityException {
         GitlabPipelineResource pipelineResource = pipelineMapper.toGitlabPipelineResource(
                 configurationResource, templateResource, callbackRef
         );
@@ -70,7 +70,6 @@ public class GitlabPipelineService {
                     "Cannot send pipeline trigger to GitLab. Template parameter missing (project id, branch)."
             );
         }
-        logger.info("Calling Gitlab Pipeline API...");
 
         ResponseEntity<ParamResource> optGitlabInstance = paramsServiceClient.getParamByName(gitlabInstanceUrl);
         if (optGitlabInstance.getStatusCode().is4xxClientError()) {
@@ -79,28 +78,85 @@ public class GitlabPipelineService {
                     "Cannot find Gitlab instance with url: " + gitlabInstanceUrl
             );
         }
+
         GitlabClient gitlabClient = new GitlabClient(
                 Objects.requireNonNull(optGitlabInstance.getBody()).getParamName(),
                 Objects.requireNonNull(optGitlabInstance.getBody()).getParamValue()
         );
 
-        ResponseEntity<GitlabRunResource> gitlabResponse = gitlabClient.postTask(
+        ResponseEntity<GitlabRunResourceResponse> gitlabResponse = gitlabClient.postTask(
                 pipelineResource,
                 templateResource.getProjectId()
         );
-        GitlabRunResource gitlabRunResource = gitlabResponse.getBody();
+        GitlabRunResourceResponse gitlabRunResourceResponse = gitlabResponse.getBody();
 
+        processGitlabResponseStatus(gitlabResponse, gitlabRunResourceResponse);
+
+        savePipelineRun(templateResource, taskId, gitlabInstanceUrl, gitlabRunResourceResponse, pipelineResource);
+        return gitlabRunResourceResponse;
+    }
+
+    /**
+     * Prepare and save the pipeline run entry.
+     * @param templateResource
+     * @param taskId the id of the devops task.
+     * @param gitlabInstanceUrl the url of the GitLab instance.
+     * @param gitlabRunResourceResponse the response from the GitLab server.
+     * @param pipelineResource the pipeline request resource.
+     */
+    private void savePipelineRun(TemplateResource templateResource, Long taskId, String gitlabInstanceUrl, GitlabRunResourceResponse gitlabRunResourceResponse, GitlabPipelineResource pipelineResource) {
+        try {
+            PipelineRun pipelineRun = new PipelineRun();
+            if(gitlabRunResourceResponse !=null) {
+                createPipelineRunEntry(templateResource, taskId, gitlabInstanceUrl, pipelineRun, gitlabRunResourceResponse, pipelineResource);
+                pipelineRunRepository.saveAndFlush(pipelineRun);
+                logger.info("Pipeline run triggered successfully");
+            }
+        } catch (Exception e) {
+            logger.error("Error during the creation of PipelineRun entry: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Create a pipeline run instance in the database.
+     * @param templateResource
+     * @param taskId the id of the devops task.
+     * @param gitlabInstanceUrl the url of the GitLab instance.
+     * @param pipelineRun the db reference.
+     * @param gitlabRunResourceResponse the response from the GitLab server.
+     * @param pipelineResource the pipeline request resource.
+     */
+    private static void createPipelineRunEntry(TemplateResource templateResource, Long taskId, String gitlabInstanceUrl, PipelineRun pipelineRun, GitlabRunResourceResponse gitlabRunResourceResponse, GitlabPipelineResource pipelineResource) {
+        pipelineRun.setTaskId(taskId);
+        pipelineRun.setRunId(gitlabRunResourceResponse.getId());
+        pipelineRun.setProject(templateResource.getProjectId());
+        pipelineRun.setStatus(GitlabRunState.valueOf(gitlabRunResourceResponse.getStatus()));
+        pipelineRun.setCreatedAt(gitlabRunResourceResponse.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME));
+        pipelineRun.setFinishedAt(
+                gitlabRunResourceResponse.getFinishedAt() != null
+                        ? gitlabRunResourceResponse.getFinishedAt().format(DateTimeFormatter.ISO_DATE_TIME)
+                        : null);
+        pipelineRun.setVariables(pipelineResource.getVariables());
+        pipelineRun.setGitlabInstanceUrl(gitlabInstanceUrl);
+    }
+
+    /**
+     * Process response coming from GitLab server, raise an exception if needed.
+     * @param gitlabResponse the response from the server.
+     * @param gitlabRunResourceResponse the body of the response.
+     */
+    private static void processGitlabResponseStatus(ResponseEntity<GitlabRunResourceResponse> gitlabResponse, GitlabRunResourceResponse gitlabRunResourceResponse) {
         if (!gitlabResponse.getStatusCode().is2xxSuccessful()) {
             switch (gitlabResponse.getStatusCode()) {
                 case UNAUTHORIZED:
                     throw new UnprocessableEntityException(
                             ExecutorApiStandardErrors.SC401_01_EXECUTOR_UNATHORIZED,
-                            "Missing credentials: " + gitlabRunResource
+                            "Missing credentials: " + gitlabRunResourceResponse
                     );
                 case FORBIDDEN:
                     throw new UnprocessableEntityException(
                             ExecutorApiStandardErrors.SC403_01_EXECUTOR_FORBIDDEN,
-                            "User does not have permission to run the pipeline: " + gitlabRunResource
+                            "User does not have permission to run the pipeline: " + gitlabRunResourceResponse
                     );
                 case BAD_REQUEST:
                     throw new UnprocessableEntityException(
@@ -110,31 +166,10 @@ public class GitlabPipelineService {
                 default:
                     throw new InternalServerException(
                             ExecutorApiStandardErrors.SC500_50_EXECUTOR_SERVICE_ERROR,
-                            "Gitlab responded with an error: " + gitlabRunResource
+                            "Gitlab responded with an error: " + gitlabRunResourceResponse
                     );
             }
         }
-        try {
-            PipelineRun pipelineRun = new PipelineRun();
-            if(gitlabRunResource!=null) {
-                pipelineRun.setTaskId(taskId);
-                pipelineRun.setRunId(gitlabRunResource.getId());
-                pipelineRun.setProject(templateResource.getProjectId());
-                pipelineRun.setStatus(GitlabRunState.valueOf(gitlabRunResource.getStatus()));
-                pipelineRun.setCreatedAt(gitlabRunResource.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME));
-                pipelineRun.setFinishedAt(
-                        gitlabRunResource.getFinishedAt() != null
-                                ? gitlabRunResource.getFinishedAt().format(DateTimeFormatter.ISO_DATE_TIME)
-                                : null);
-                pipelineRun.setVariables(pipelineResource.getVariables());
-                pipelineRun.setGitlabInstanceUrl(gitlabInstanceUrl);
-                pipelineRunRepository.saveAndFlush(pipelineRun);
-            }
-        } catch (Exception e) {
-            logger.error("Error during the creation of PipelineRun entry: {}", e.getMessage());
-        }
-        logger.info("Pipeline run triggered successfully");
-        return gitlabRunResource;
     }
 
     /**
@@ -144,7 +179,7 @@ public class GitlabPipelineService {
      */
     @Async
     public CompletableFuture<TaskStatus> getPipelineStatus(Long taskId) {
-        Optional<PipelineRun> optionalPipelineRun = pipelineRunRepository.findById(taskId);
+        Optional<PipelineRun> optionalPipelineRun = pipelineRunRepository.findByTaskId(taskId);
         if (optionalPipelineRun.isEmpty()) {
             throw new NotFoundException(ExecutorApiStandardErrors.SC404_01_PIPELINE_RUN_NOT_FOUND,
                     "Pipeline run with id " + taskId + " not found.");
@@ -152,7 +187,7 @@ public class GitlabPipelineService {
         PipelineRun pipelineRun = optionalPipelineRun.get();
 
         int counter = 0;
-        ResponseEntity<GitlabRunResource> gitlabResponse = null;
+        ResponseEntity<GitlabRunResourceResponse> gitlabResponse = null;
 
         ResponseEntity<ParamResource> optGitlabInstance = paramsServiceClient.getParamByName(pipelineRun.getGitlabInstanceUrl());
         if (optGitlabInstance.getStatusCode().is4xxClientError()) {
@@ -180,7 +215,7 @@ public class GitlabPipelineService {
             counter++;
         }
         if(gitlabResponse!=null) {
-            GitlabRunResource responseBody = gitlabResponse.getBody();
+            GitlabRunResourceResponse responseBody = gitlabResponse.getBody();
             if (!gitlabResponse.getStatusCode().is2xxSuccessful()) {
                 switch (gitlabResponse.getStatusCode()) {
                     case UNAUTHORIZED:

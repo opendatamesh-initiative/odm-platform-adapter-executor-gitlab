@@ -1,6 +1,7 @@
 package org.opendatamesh.platform.up.executor.gitlabci.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -113,12 +114,14 @@ public class GitlabExecutorController {
 
     /**
      * Create a task based on the input received from the ODM DevOps module.
+     *
      * @param task the received task
      * @return the created task after a validation.
      */
     public TaskResource createTask(TaskResource task) {
 
-        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectMapper objectMapper = new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         TemplateResource template;
         ConfigurationResource configuration;
 

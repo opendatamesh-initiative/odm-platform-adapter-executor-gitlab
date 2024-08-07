@@ -2,6 +2,7 @@ package org.opendatamesh.platform.up.executor.gitlabci.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.persistence.AttributeConverter;
@@ -13,7 +14,8 @@ import java.util.Map;
 @Converter
 public class ListMapConverter implements AttributeConverter<List<Map<String, String>>, String> {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
 
     @Override

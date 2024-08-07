@@ -16,13 +16,12 @@ odm:
       address: ${PARAMS_SERVICE_ADDRESS}
       client-uuid: ${PARAMS_SERVICE_CLIENT_UUID}
       client-prefix: DEVOPS_GITLAB_
-
-################
-# Pipeline Polling Config
-################
-polling:
-  retries: 3
-  interval: 10 # Time in seconds
+  executors:
+    gitlab:
+      pipelines-config:
+        polling:
+          retries: 3
+          interval: 10 # Time in seconds
 
 ################
 # Spring Config

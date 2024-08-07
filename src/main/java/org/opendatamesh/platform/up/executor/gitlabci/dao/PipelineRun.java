@@ -10,11 +10,15 @@ import java.util.Map;
 
 
 @Data
-@Entity(name = "PielineRun")
-@Table(name = "PIPELINE_RUNS", schema = "ODMEXECUTOR")
+@Entity
+@Table(name = "PIPELINE_RUNS")
 public class PipelineRun {
     @Id
-    @Column(name = "TASK_ID")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @Column(name = "PIPELINE_RUN_ID")
+    protected Long pipelineRunId;
+
+    @Column(name = "TASK_ID", unique = true)
     protected Long taskId;
 
     @Column(name = "RUN_ID")
@@ -37,5 +41,6 @@ public class PipelineRun {
     @Column(name = "FINISHED_AT")
     protected String finishedAt;
 
+    @Column(name = "GITLAB_INSTANCE_URL")
     protected String gitlabInstanceUrl;
 }

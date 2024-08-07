@@ -1,6 +1,7 @@
 package org.opendatamesh.platform.up.executor.gitlabci.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -24,7 +25,8 @@ public class GitlabConfigControllerTest {
 
     WireMockServer wireMockServer;
     ParamResource responseParam = new ParamResource();
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
 
     @Autowired

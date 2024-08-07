@@ -1,6 +1,7 @@
 package org.opendatamesh.platform.up.executor.gitlabci.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -15,7 +16,7 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.ConfigurationRes
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TaskResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TaskStatus;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.TemplateResource;
-import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunResourceResponse;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunState;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,9 +36,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 @AutoConfigureWireMock(port = 8004)
 public class GitlabExecutorControllerTest {
     WireMockServer wireMockServer;
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     ParamResource responseParam = new ParamResource();
-    GitlabRunResource gitlabRunResource = new GitlabRunResource();
+    GitlabRunResourceResponse gitlabRunResourceResponse = new GitlabRunResourceResponse();
 
     @Autowired
     private GitlabExecutorController executorController;
@@ -55,24 +57,24 @@ public class GitlabExecutorControllerTest {
         responseParam.setParamName(INSTANCE_URL);
         responseParam.setParamValue(GITLAB_TOKEN);
 
-        gitlabRunResource.setId("1");
-        gitlabRunResource.setIid("1");
-        gitlabRunResource.setProjectId(1000);
-        gitlabRunResource.setStatus(GitlabRunState.success.toString());
-        gitlabRunResource.setCreatedAt(ZonedDateTime.now());
-        gitlabRunResource.setUpdatedAt(ZonedDateTime.now());
-        gitlabRunResource.setFinishedAt(ZonedDateTime.now());
-        gitlabRunResource.setStartedAt(ZonedDateTime.now());
-        gitlabRunResource.setCommittedAt(ZonedDateTime.now());
-        GitlabRunResource.Message msg = new GitlabRunResource.Message();
+        gitlabRunResourceResponse.setId("1");
+        gitlabRunResourceResponse.setIid("1");
+        gitlabRunResourceResponse.setProjectId(1000);
+        gitlabRunResourceResponse.setStatus(GitlabRunState.success.toString());
+        gitlabRunResourceResponse.setCreatedAt(ZonedDateTime.now());
+        gitlabRunResourceResponse.setUpdatedAt(ZonedDateTime.now());
+        gitlabRunResourceResponse.setFinishedAt(ZonedDateTime.now());
+        gitlabRunResourceResponse.setStartedAt(ZonedDateTime.now());
+        gitlabRunResourceResponse.setCommittedAt(ZonedDateTime.now());
+        GitlabRunResourceResponse.Message msg = new GitlabRunResourceResponse.Message();
         msg.setBase(List.of(""));
-        gitlabRunResource.setMessage(msg);
-        GitlabRunResource.User user = new GitlabRunResource.User();
+        gitlabRunResourceResponse.setMessage(msg);
+        GitlabRunResourceResponse.User user = new GitlabRunResourceResponse.User();
         user.setId(1);
         user.setName("first");
         user.setUsername("first");
         user.setAvatarUrl("");
-        gitlabRunResource.setUser(user);
+        gitlabRunResourceResponse.setUser(user);
     }
 
     @Test
@@ -84,7 +86,7 @@ public class GitlabExecutorControllerTest {
                         aResponse()
                                 .withStatus(201)
                                 .withHeader("Content-Type", "application/json")
-                                .withBody(objectMapper.writeValueAsString(gitlabRunResource))
+                                .withBody(objectMapper.writeValueAsString(gitlabRunResourceResponse))
                 ))
         ;
 
@@ -305,16 +307,20 @@ public class GitlabExecutorControllerTest {
 
     @BeforeEach
     public void populateDb() {
-        PipelineRun pipelineRun = new PipelineRun();
-        pipelineRun.setRunId("1");
-        pipelineRun.setFinishedAt(new Date().toString());
-        pipelineRun.setProject("1000");
-        pipelineRun.setVariables(List.of());
-        pipelineRun.setTaskId(1L);
-        pipelineRun.setStatus(GitlabRunState.success);
-        pipelineRun.setGitlabInstanceUrl(INSTANCE_URL);
-        pipelineRun.setCreatedAt(new Date().toString());
-        pipelineRunRepository.saveAndFlush(pipelineRun);
+        List<PipelineRun> runs = pipelineRunRepository.findAll();
+        if (pipelineRunRepository.findById(1L).isEmpty()) {
+            PipelineRun pipelineRun = new PipelineRun();
+            pipelineRun.setPipelineRunId(1L);
+            pipelineRun.setRunId("2");
+            pipelineRun.setFinishedAt(new Date().toString());
+            pipelineRun.setProject("1000");
+            pipelineRun.setVariables(List.of());
+            pipelineRun.setTaskId(2L);
+            pipelineRun.setStatus(GitlabRunState.success);
+            pipelineRun.setGitlabInstanceUrl(INSTANCE_URL);
+            pipelineRun.setCreatedAt(new Date().toString());
+            pipelineRunRepository.saveAndFlush(pipelineRun);
+        }
     }
 
     @Test
@@ -326,7 +332,7 @@ public class GitlabExecutorControllerTest {
                         aResponse()
                                 .withStatus(201)
                                 .withHeader("Content-Type", "application/json")
-                                .withBody(objectMapper.writeValueAsString(gitlabRunResource))
+                                .withBody(objectMapper.writeValueAsString(gitlabRunResourceResponse))
                 ))
         ;
 
@@ -358,7 +364,7 @@ public class GitlabExecutorControllerTest {
                         aResponse()
                                 .withStatus(400)
                                 .withHeader("Content-Type", "application/json")
-                                .withBody(objectMapper.writeValueAsString(gitlabRunResource))
+                                .withBody(objectMapper.writeValueAsString(gitlabRunResourceResponse))
                 ))
         ;
 
@@ -385,7 +391,7 @@ public class GitlabExecutorControllerTest {
                         aResponse()
                                 .withStatus(401)
                                 .withHeader("Content-Type", "application/json")
-                                .withBody(objectMapper.writeValueAsString(gitlabRunResource))
+                                .withBody(objectMapper.writeValueAsString(gitlabRunResourceResponse))
                 ))
         ;
 
@@ -411,7 +417,7 @@ public class GitlabExecutorControllerTest {
                         aResponse()
                                 .withStatus(403)
                                 .withHeader("Content-Type", "application/json")
-                                .withBody(objectMapper.writeValueAsString(gitlabRunResource))
+                                .withBody(objectMapper.writeValueAsString(gitlabRunResourceResponse))
                 ))
         ;
 

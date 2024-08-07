@@ -1,9 +1,6 @@
 package org.opendatamesh.platform.up.executor.gitlabci.services;
 
 import lombok.RequiredArgsConstructor;
-import org.opendatamesh.platform.core.commons.servers.exceptions.InternalServerException;
-import org.opendatamesh.platform.core.commons.servers.exceptions.NotFoundException;
-import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.GitlabClient;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.ParamsServiceClient;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRun;
@@ -17,6 +14,9 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.Gi
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunResourceResponse;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunState;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.InternalServerException;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.NotFoundException;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.UnprocessableEntityException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

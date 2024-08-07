@@ -1,6 +1,7 @@
 package org.opendatamesh.platform.up.executor.gitlabci.resources;
 
-import org.opendatamesh.platform.core.commons.servers.exceptions.ODMApiStandardErrors;
+
+import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.ODMApiStandardErrors;
 
 public enum ExecutorApiStandardErrors implements ODMApiStandardErrors {
     // Bad Request Exceptions

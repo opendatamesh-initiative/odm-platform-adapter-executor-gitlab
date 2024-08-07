@@ -12,7 +12,6 @@ import org.opendatamesh.dpds.model.internals.LifecycleInfoDPDS;
 import org.opendatamesh.dpds.model.internals.LifecycleTaskInfoDPDS;
 import org.opendatamesh.dpds.serde.LifecycleInfoDeserializer;
 import org.opendatamesh.dpds.serde.LifecycleTaskInfoDeserializer;
-import org.opendatamesh.platform.core.commons.clients.utils.PageUtility;
 import org.springframework.data.domain.Page;
 
 public class ObjectMapperFactory  {

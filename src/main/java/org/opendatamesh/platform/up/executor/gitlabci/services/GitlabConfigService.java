@@ -1,12 +1,12 @@
 package org.opendatamesh.platform.up.executor.gitlabci.services;
 
 import lombok.RequiredArgsConstructor;
-import org.opendatamesh.platform.core.commons.servers.exceptions.ConflictException;
-import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.ParamsServiceClient;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.ExecutorApiStandardErrors;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabConfigResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.ConflictException;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.UnprocessableEntityException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

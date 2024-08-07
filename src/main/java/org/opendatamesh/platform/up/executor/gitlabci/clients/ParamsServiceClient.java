@@ -1,10 +1,10 @@
 package org.opendatamesh.platform.up.executor.gitlabci.clients;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.ExecutorApiStandardErrors;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.GitlabClientException;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.UnprocessableEntityException;
 import org.opendatamesh.platform.up.executor.gitlabci.services.GitlabPipelineService;
 import org.opendatamesh.platform.up.executor.gitlabci.utils.ObjectMapperFactory;
 import org.slf4j.Logger;

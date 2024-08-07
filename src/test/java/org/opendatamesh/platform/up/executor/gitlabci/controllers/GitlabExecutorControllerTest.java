@@ -9,7 +9,6 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.opendatamesh.platform.core.commons.servers.exceptions.UnprocessableEntityException;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRun;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRunRepository;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.ConfigurationResource;
@@ -19,6 +18,7 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.TemplateResource
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunResourceResponse;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.gitlab.GitlabRunState;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
+import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.UnprocessableEntityException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;

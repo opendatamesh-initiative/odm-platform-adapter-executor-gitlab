@@ -1,7 +1,6 @@
 package org.opendatamesh.platform.up.executor.gitlabci.clients;
 
 import lombok.Getter;
-import org.opendatamesh.platform.core.commons.clients.ODMApiRoutes;
 
 /**
  * Enumeration that contains the routes to the gitlab APIs.

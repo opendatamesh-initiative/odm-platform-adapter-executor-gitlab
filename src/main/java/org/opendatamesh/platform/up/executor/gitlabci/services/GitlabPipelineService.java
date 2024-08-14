@@ -3,6 +3,7 @@ package org.opendatamesh.platform.up.executor.gitlabci.services;
 import lombok.RequiredArgsConstructor;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.GitlabClient;
 import org.opendatamesh.platform.up.executor.gitlabci.clients.ParamsServiceClient;
+import org.opendatamesh.platform.up.executor.gitlabci.config.PipelineConfiguration;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRun;
 import org.opendatamesh.platform.up.executor.gitlabci.dao.PipelineRunRepository;
 import org.opendatamesh.platform.up.executor.gitlabci.mappers.GitlabPipelineMapper;
@@ -19,7 +20,6 @@ import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.NotFo
 import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.UnprocessableEntityException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -38,11 +38,8 @@ import java.util.concurrent.CompletableFuture;
 public class GitlabPipelineService {
     private final GitlabPipelineMapper pipelineMapper;
     private final PipelineRunRepository pipelineRunRepository;
-    @Value("${odm.executors.gitlab.pipelines-config.polling.retries}")
-    private Integer pollingNumRetries;
-    @Value("${odm.executors.gitlab.pipelines-config.polling.interval}")
-    private Integer pollingIntervalSeconds;
     private final ParamsServiceClient paramsServiceClient;
+    private final PipelineConfiguration pipelineConfiguration;
 
     private static final Logger logger = LoggerFactory.getLogger(GitlabPipelineService.class);
 
@@ -201,13 +198,13 @@ public class GitlabPipelineService {
                 Objects.requireNonNull(optGitlabInstance.getBody()).getParamValue()
         );
 
-        while (counter < pollingNumRetries) {
+        while (counter < pipelineConfiguration.getPollingNumRetries()) {
             gitlabResponse = gitlabClient.readTask(pipelineRun.getProject(), pipelineRun.getRunId());
             if (gitlabResponse.getStatusCode().is2xxSuccessful() && Objects.requireNonNull(gitlabResponse.getBody()).getStatus().equals(GitlabRunState.success.toString())) {
                 break;
             }
             try {
-                Thread.sleep((long) pollingIntervalSeconds);
+                Thread.sleep((long) pipelineConfiguration.getPollingIntervalSeconds());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 logger.warn("Polling thread error: " + e.getMessage());

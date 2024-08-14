@@ -6,5 +6,5 @@ public interface ODMApiStandardErrors {
 
     static ODMApiStandardErrors getNotFoundError(String className) {
         return null;
-    };
+    }
 }

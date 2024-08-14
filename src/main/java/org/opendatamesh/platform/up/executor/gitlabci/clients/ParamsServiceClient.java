@@ -1,6 +1,7 @@
 package org.opendatamesh.platform.up.executor.gitlabci.clients;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.opendatamesh.platform.up.executor.gitlabci.config.ParamConfiguration;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.ExecutorApiStandardErrors;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.client.params.ParamResource;
 import org.opendatamesh.platform.up.executor.gitlabci.resources.exceptions.GitlabClientException;
@@ -27,7 +28,7 @@ import java.util.Objects;
  */
 @Service
 public class ParamsServiceClient {
-    private static final Logger logger = LoggerFactory.getLogger(GitlabPipelineService.class);
+    private static final Logger logger = LoggerFactory.getLogger(ParamsServiceClient.class);
     protected String serverAddress;
     protected ObjectMapper mapper;
     public TestRestTemplate rest = new TestRestTemplate();
@@ -35,16 +36,13 @@ public class ParamsServiceClient {
      * The client UUID to authenticate with the service, in order to retrieve the secret value decrypted.
      */
     private final String clientUUID;
-    /**
-     * The client prefix, used to set the prefix to the display name of the parameter.
-     */
-    @Value("${odm.productplane.params-service.client-prefix}")
-    private String clientPrefix;
+    private final ParamConfiguration paramConfiguration;
 
-    public ParamsServiceClient(@Value("${odm.productplane.params-service.address}") String serverAddress, @Value("${odm.productplane.params-service.client-uuid}") String clientUUID) {
-        this.serverAddress = serverAddress;
+    public ParamsServiceClient(ParamConfiguration paramConfiguration) {
+        this.serverAddress = paramConfiguration.getServerAddress();
+        this.paramConfiguration = paramConfiguration;
         this.mapper = ObjectMapperFactory.JSON_MAPPER;
-        this.clientUUID = clientUUID;
+        this.clientUUID = paramConfiguration.getClientUUID();
     }
 
     /**
@@ -134,7 +132,7 @@ public class ParamsServiceClient {
     public void deleteParam(String paramName) {
         HttpEntity<ParamResource> entity = new HttpEntity<>(null, getHttpHeaders());
         ResponseEntity<ParamResource> param = getParamByName(paramName);
-        if (param.getStatusCode().is2xxSuccessful() && Objects.requireNonNull(param.getBody()).getDisplayName().startsWith(clientPrefix)) {
+        if (param.getStatusCode().is2xxSuccessful() && Objects.requireNonNull(param.getBody()).getDisplayName().startsWith(paramConfiguration.getClientPrefix())) {
             try {
                 rest.exchange(
                         apiUrl(ParamsServerApiRoutes.DELETE_PARAM),

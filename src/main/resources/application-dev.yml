@@ -1,0 +1,70 @@
+################
+# Server Config
+################
+odm:
+  productplane:
+    devops-service:
+
+    params-service:
+      address: http://localhost:8004
+      client-uuid: paramclient123
+      client-prefix: DEVOPS_GITLAB_
+  executors:
+    gitlab:
+      db-config:
+        default-schema: ODMEXECUTOR_GITLAB
+      pipelines-config:
+        polling:
+          retries: 3
+          interval: 10 # Time in seconds
+
+################
+# Spring Config
+################
+spring:
+  profile: dev
+  security:
+    encryptor:
+
+  jpa:
+    hibernate:
+      #ddl-auto: validate
+      show-sql: true
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+        format_sql: true
+        default_schema: ODMEXECUTOR
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;INIT=CREATE SCHEMA IF NOT EXISTS ODMEXECUTOR
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # Flyway https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html#appendix.application-properties.data-migration
+  flyway:
+    enabled: true
+    url: jdbc:h2:mem:testdb
+    user: sa
+    password:
+    schemas: ODMEXECUTOR
+    locations: classpath:db/migration/h2
+    clean-on-validation-error: true
+
+################
+# Enable logging leven (log each HTTP parameter)
+################
+#logging:
+#  level:
+#    org:
+#      apache:
+#        http: DEBUG

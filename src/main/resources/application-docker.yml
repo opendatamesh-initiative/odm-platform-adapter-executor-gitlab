@@ -18,6 +18,8 @@ odm:
       client-prefix: DEVOPS_GITLAB_
   executors:
     gitlab:
+      db-config:
+        default-schema: ODMEXECUTOR_GITLAB
       pipelines-config:
         polling:
           retries: 3
@@ -33,7 +35,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
       show-sql: true
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
@@ -46,7 +48,7 @@ spring:
           lob:
             non_contextual_creation: true
         format_sql: true
-        default_schema: ODMEXECUTOR
+        default_schema: ODMEXECUTOR_GITLAB
   datasource:
     url: ${DATABASE_URL}?allowPublicKeyRetrieval=true&useSSL=false
     username: ${DATABASE_USERNAME}
